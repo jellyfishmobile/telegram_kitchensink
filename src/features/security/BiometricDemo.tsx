@@ -18,6 +18,11 @@ export function BiometricDemo() {
       return;
     }
 
+    console.log('WebApp version:', webApp.version);
+    console.log('Platform:', webApp.platform);
+    console.log('Available methods:', Object.keys(webApp));
+    console.log('CloudStorage available:', !!webApp.CloudStorage);
+
     try {
       // First show the confirmation popup
       const buttonId = await webApp.showPopup({
@@ -32,13 +37,22 @@ export function BiometricDemo() {
 
       // Only proceed with biometric auth if user clicked authenticate
       if (buttonId === 'authenticate') {
-        // Use the correct method from CloudStorage API
+        console.log('User confirmed, attempting biometric auth...');
+        
+        // Initialize CloudStorage if needed
+        if (!webApp.CloudStorage) {
+          throw new Error('CloudStorage API is not available');
+        }
+
         try {
+          console.log('Attempting to access protected data...');
           // Try to read a protected item - this will trigger biometric auth
-          await webApp.CloudStorage.getItem('protected_data', {
+          const result = await webApp.CloudStorage.getItems(['protected_data'], {
             useEncryption: true,
             useBiometrics: true
           });
+          
+          console.log('Protected data access result:', result);
           
           setIsAuthenticated(true);
           showPopup({
@@ -49,14 +63,21 @@ export function BiometricDemo() {
             ]
           });
         } catch (error) {
+          console.error('CloudStorage operation failed:', error);
+          
           if (error.message?.includes('biometric_authentication_failed')) {
             throw new Error('Biometric authentication failed');
           } else {
             // If it's first time or item doesn't exist, try to set it
-            await webApp.CloudStorage.setItem('protected_data', 'authenticated', {
+            console.log('Attempting to set protected data...');
+            await webApp.CloudStorage.setItems([{
+              key: 'protected_data',
+              value: 'authenticated'
+            }], {
               useEncryption: true,
               useBiometrics: true
             });
+            
             setIsAuthenticated(true);
             showPopup({
               title: 'Authentication Successful',
@@ -73,7 +94,7 @@ export function BiometricDemo() {
       console.error('Authentication error:', error);
       showPopup({
         title: 'Authentication Failed',
-        message: 'Biometric authentication failed. Would you like to try again?',
+        message: `Biometric authentication failed: ${error.message}. Would you like to try again?`,
         buttons: [
           { id: 'retry', type: 'default', text: 'Retry' },
           { id: 'cancel', type: 'cancel', text: 'Cancel' }
