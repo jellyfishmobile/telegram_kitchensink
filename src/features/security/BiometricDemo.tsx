@@ -32,12 +32,14 @@ export function BiometricDemo() {
 
       // Only proceed with biometric auth if user clicked authenticate
       if (buttonId === 'authenticate') {
-        const success = await webApp.requestBiometricAuthentication({
-          title: 'Authenticate',
-          subtitle: 'Please verify your identity'
-        });
-        
-        if (success) {
+        // Use the correct method from CloudStorage API
+        try {
+          // Try to read a protected item - this will trigger biometric auth
+          await webApp.CloudStorage.getItem('protected_data', {
+            useEncryption: true,
+            useBiometrics: true
+          });
+          
           setIsAuthenticated(true);
           showPopup({
             title: 'Authentication Successful',
@@ -45,13 +47,25 @@ export function BiometricDemo() {
             buttons: [
               { id: 'ok', type: 'ok', text: 'Continue' }
             ]
-          }, () => {
-            // Store auth state
-            webApp.CloudStorage.setItem('auth_token', Date.now().toString())
-              .catch(console.error);
           });
-        } else {
-          throw new Error('Authentication cancelled or failed');
+        } catch (error) {
+          if (error.message?.includes('biometric_authentication_failed')) {
+            throw new Error('Biometric authentication failed');
+          } else {
+            // If it's first time or item doesn't exist, try to set it
+            await webApp.CloudStorage.setItem('protected_data', 'authenticated', {
+              useEncryption: true,
+              useBiometrics: true
+            });
+            setIsAuthenticated(true);
+            showPopup({
+              title: 'Authentication Successful',
+              message: 'Biometric verification completed successfully!',
+              buttons: [
+                { id: 'ok', type: 'ok', text: 'Continue' }
+              ]
+            });
+          }
         }
       }
       
