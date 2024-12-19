@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Fingerprint } from 'lucide-react';
 import { Section } from '../../components/common/Section';
 import { useTelegramWebApp } from '../../hooks/useTelegramWebApp';
@@ -11,13 +11,6 @@ export function BiometricDemo() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const isBiometricSupported = webApp?.isVersionAtLeast('6.9');
-
-  // Force biometric check on component mount
-  useEffect(() => {
-    if (webApp && isBiometricSupported && !isAuthenticated) {
-      handleBiometricAuth();
-    }
-  }, [webApp, isBiometricSupported]);
 
   const handleBiometricAuth = async () => {
     if (!webApp || !isBiometricSupported) {
