@@ -19,31 +19,47 @@ export function BiometricDemo() {
     }
 
     try {
-      // Use CloudStorage API to trigger biometric authentication
-      const result = await webApp.CloudStorage.getItems(['auth_token']);
-      
-      // The mere fact that we got a response means authentication was successful
-      setIsAuthenticated(true);
-      
-      // Show success popup
-      showPopup({
-        title: 'Authentication Successful',
-        message: 'Biometric verification completed successfully!',
-        buttons: [
-          { id: 'ok', type: 'ok', text: 'Continue' }
-        ]
-      }, () => {
-        // Store auth state
-        webApp.CloudStorage.setItem('auth_token', Date.now().toString())
-          .catch(console.error);
+      // Request biometric authentication from Telegram
+      const success = await webApp.showPopup({
+        title: 'Biometric Authentication',
+        message: 'Please authenticate using your biometrics',
+        buttons: [{
+          id: 'authenticate',
+          type: 'default',
+          text: 'Authenticate'
+        }]
+      }).then(async (buttonId) => {
+        if (buttonId === 'authenticate') {
+          return await webApp.requestBiometricAuthentication({
+            title: 'Authenticate',
+            subtitle: 'Please verify your identity'
+          });
+        }
+        return false;
       });
+      
+      if (success) {
+        setIsAuthenticated(true);
+        showPopup({
+          title: 'Authentication Successful',
+          message: 'Biometric verification completed successfully!',
+          buttons: [
+            { id: 'ok', type: 'ok', text: 'Continue' }
+          ]
+        }, () => {
+          // Store auth state
+          webApp.CloudStorage.setItem('auth_token', Date.now().toString())
+            .catch(console.error);
+        });
+      } else {
+        throw new Error('Authentication cancelled or failed');
+      }
       
     } catch (error) {
       console.error('Authentication error:', error);
-      // If authentication fails, show error and retry
       showPopup({
-        title: 'Authentication Required',
-        message: 'Please authenticate using biometrics to continue.',
+        title: 'Authentication Failed',
+        message: 'Biometric authentication failed. Would you like to try again?',
         buttons: [
           { id: 'retry', type: 'default', text: 'Retry' },
           { id: 'cancel', type: 'cancel', text: 'Cancel' }
