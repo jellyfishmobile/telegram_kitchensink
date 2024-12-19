@@ -19,8 +19,8 @@ export function BiometricDemo() {
     }
 
     try {
-      // Request biometric authentication from Telegram
-      const success = await webApp.showPopup({
+      // First show the confirmation popup
+      const buttonId = await webApp.showPopup({
         title: 'Biometric Authentication',
         message: 'Please authenticate using your biometrics',
         buttons: [{
@@ -28,31 +28,31 @@ export function BiometricDemo() {
           type: 'default',
           text: 'Authenticate'
         }]
-      }).then(async (buttonId) => {
-        if (buttonId === 'authenticate') {
-          return await webApp.requestBiometricAuthentication({
-            title: 'Authenticate',
-            subtitle: 'Please verify your identity'
-          });
-        }
-        return false;
       });
-      
-      if (success) {
-        setIsAuthenticated(true);
-        showPopup({
-          title: 'Authentication Successful',
-          message: 'Biometric verification completed successfully!',
-          buttons: [
-            { id: 'ok', type: 'ok', text: 'Continue' }
-          ]
-        }, () => {
-          // Store auth state
-          webApp.CloudStorage.setItem('auth_token', Date.now().toString())
-            .catch(console.error);
+
+      // Only proceed with biometric auth if user clicked authenticate
+      if (buttonId === 'authenticate') {
+        const success = await webApp.requestBiometricAuthentication({
+          title: 'Authenticate',
+          subtitle: 'Please verify your identity'
         });
-      } else {
-        throw new Error('Authentication cancelled or failed');
+        
+        if (success) {
+          setIsAuthenticated(true);
+          showPopup({
+            title: 'Authentication Successful',
+            message: 'Biometric verification completed successfully!',
+            buttons: [
+              { id: 'ok', type: 'ok', text: 'Continue' }
+            ]
+          }, () => {
+            // Store auth state
+            webApp.CloudStorage.setItem('auth_token', Date.now().toString())
+              .catch(console.error);
+          });
+        } else {
+          throw new Error('Authentication cancelled or failed');
+        }
       }
       
     } catch (error) {
